@@ -9,6 +9,12 @@
 #include <signal.h>
 #include "others.h"
 
+pthread_mutex_t lock1 ;
+
+volatile sig_atomic_t programStatus =0;
+
+
+
 
 
 void* readerThread(void *CpuDataPassed);
@@ -19,30 +25,34 @@ void* loggerThread(void *CpuDataPassed);
 
 
 
-pthread_mutex_t lock1 ;
-volatile sig_atomic_t programStatus =0;
-
 logData_t logData = {0,0,0,0,0};
-
 
 int main()
 {
 
     int cores = getCpuCores();
+    
     assert (cores > 1);
     
     cpuData1_t myCpuData1[cores], *p_myCpuData1;
-    p_myCpuData1 = myCpuData1;
     myCpuData1[0].cpuCores = cores;
-
+    myCpuData1[0].dataAvailable = true;
+    p_myCpuData1 = myCpuData1;
     signal(SIGINT,interrupt);
 
     struct sigaction action;
     memset(&action, 0, sizeof(struct sigaction));
     action.sa_handler = term;
     sigaction(SIGTERM, &action, NULL);
-
     pthread_t Reader, Analyzer, Printer, Watchdog, Logger;
+    if (pthread_mutex_init(&lock1, NULL) != 0)
+    {
+        printf("Mutex initialization failed \n");
+        return 1;
+    }
+    
+    
+
     pthread_create(&Reader, NULL,(void*)readerThread, (void*)p_myCpuData1);
     pthread_create(&Analyzer, NULL,(void*)analyzerThread, (void*)p_myCpuData1);
     pthread_create(&Printer, NULL,(void*)printnerThread, (void*)p_myCpuData1);
@@ -56,8 +66,10 @@ int main()
     p_myCpuData1 = NULL;
     printf("Memory freed \n");
     pthread_exit(NULL);
+
     return 0;
 }
+
 
 void* readerThread(void *CpuDataPassed)
 {
@@ -144,7 +156,7 @@ void* watchdogThread(void *CpuDataPassed)
 {
     cpuData1_t *myData3;
     myData3 = (cpuData1_t *)CpuDataPassed;
-    signal(SIGALRM, watchdogCallback);
+    signal(SIGALRM, watchdogCallabck);
     alarm(2);
     while(!programStatus)
     {
@@ -189,5 +201,6 @@ void* loggerThread(void *CpuDataPassed)
     CpuDataPassed = NULL;
     printf("Logger memory free\n");
 }
+
 
 

@@ -1,24 +1,10 @@
 #include "others.h"
 
 
+#define FILENAME "/proc/stat"
+
 extern logData_t logData;
 extern sig_atomic_t programStatus;
-
-
-void term(int sig)
-{
-    programStatus =1;
-    printf("Program was termianted\n");
-    sleep(2);
-}
-
-
-void interrupt(int sig)
-{
-    printf("Program was interrupted\n");
-    raise(SIGTERM);
-}
-
 
 int getCpuCores()
 {
@@ -29,9 +15,9 @@ int getCpuCores()
         return 0;
     }
     int coreNumber =0;
-    char str[80];
+    char str[60];
     char cpu[] = "cpu";
-    while (fgets(str,80,fp))
+    while (fgets(str,60,fp))
     {   
         if (strncmp(cpu,str,3) == 0)
         {
@@ -43,21 +29,7 @@ int getCpuCores()
     return coreNumber;
 }
 
-
-threadError_t feedWatchdog(cpuData1_t *isDataAvailable)
-{
-    if (isDataAvailable[0].dataAvailable == true)
-        {
-            int seconds = alarm(2);
-           if ( seconds < 0 )
-           {
-                return logData.watchdogError;
-           }
-        }
-        usleep(250000);
-}
-
-void watchdogCallback(int sig)
+void watchdogCallabck(int sig)
 {
     printf("Error code: ");
     if (logData.readerError)
@@ -106,6 +78,19 @@ void watchdogCallback(int sig)
     }
     printf("\nProgram will be closed, timeout... \n");
     exit(1);
+}
+
+
+void term(int sig)
+{
+    programStatus = 1;
+  
+}
+
+void interrupt(int sig)
+{
+    printf("Program was interrupted\n");
+    raise(SIGTERM);
 }
 
 
@@ -270,4 +255,23 @@ threadError_t saveLogData(cpuData1_t *convertedData, FILE *fp)
         fp = NULL;
         return threadOK;
     }
+    
 }
+
+
+threadError_t feedWatchdog(cpuData1_t *isDataAvailable)
+{
+    if (isDataAvailable[0].dataAvailable == true)
+        {
+            int seconds = alarm(2);
+           if ( seconds < 0 )
+           {
+                return logData.watchdogError;
+           }
+        }
+        usleep(250000);
+}
+
+
+
+
