@@ -39,7 +39,7 @@ void* watchdogThread(void *CpuDataPassed);
 void* loggerThread(void *CpuDataPassed);
 
 int getCpuCores();
-
+void watchdogCallabck(int sig);
 
 
 int main()
@@ -55,14 +55,14 @@ int main()
     pthread_t Reader, Analyzer, Printer, Watchdog, Logger;
     pthread_create(&Reader, NULL,(void*)readerThread, (void*)p_myCpuData1);
     pthread_create(&Analyzer, NULL,(void*)analyzerThread, (void*)p_myCpuData1);
-    // pthread_create(&Printer, NULL,(void*)printnerThread, (void*)p_myCpuData1);
-    // pthread_create(&Watchdog, NULL,(void*)watchdogThread, (void*)p_myCpuData1);
-    // pthread_create(&Logger, NULL,(void*)loggerThread, (void*)p_myCpuData1);
+    pthread_create(&Printer, NULL,(void*)printnerThread, (void*)p_myCpuData1);
+    pthread_create(&Watchdog, NULL,(void*)watchdogThread, (void*)p_myCpuData1);
+    pthread_create(&Logger, NULL,(void*)loggerThread, (void*)p_myCpuData1);
     pthread_join(Reader,NULL);
     pthread_join(Analyzer,NULL);
-    // pthread_join(Printer,NULL);
-    // pthread_join(Watchdog, NULL);
-    // pthread_join(Logger, NULL);
+    pthread_join(Printer,NULL);
+    pthread_join(Watchdog, NULL);
+    pthread_join(Logger, NULL);
     pthread_exit(NULL);
     return 0;
 }
@@ -151,30 +151,93 @@ void* analyzerThread(void *CpuDataPassed)
 
 void* printnerThread(void *CpuDataPassed)
 {
-   
+    cpuData1_t *myData2;
+    myData2 = (cpuData1_t *)CpuDataPassed;
+
     while (!programStatus)
     {   
-       
-        sleep(1);
+        static double prevTotal = 0;
+        system("clear");
+        for (int i = 0;i< myData2[0].cpuCores;i++)
+        {
+            
+            if (i == 0)
+            {
+                printf("Cpu total   %lf  \n",myData2[i].cpuUsage);
+                if (myData2[i].cpuUsage == 0.0000000000000)
+                {
+                    break;
+                }
+                else if (prevTotal ==  myData2[0].cpuUsage) 
+                {
+                    break;
+                }
+            }
+            else
+            {
+                printf("Cpu %d       %lf  \n",i,myData2[i].cpuUsage);
+            }
+    }
+    prevTotal = myData2[0].cpuUsage; 
+    sleep(1);
     }
 }
 
 void* watchdogThread(void *CpuDataPassed)
 {
-    
+    cpuData1_t *myData3;
+    myData3 = (cpuData1_t *)CpuDataPassed;
+    signal(SIGALRM, watchdogCallabck);
+    alarm(2);
     while(!programStatus)
     {
-   
+        if (myData3[0].dataAvailable == true)
+        {
+            alarm(2);
+        }
+        usleep(250000);
     }
    
 }
 
 void* loggerThread(void *CpuDataPassed)
 {
-  
+    FILE *fp1 = NULL;
+    cpuData1_t *mydata4;
+    mydata4 = (cpuData1_t *)CpuDataPassed;
+    
     while (!programStatus)
     {   
+       
+        pthread_mutex_lock(&lock1);
+        fp1 = fopen("logData.txt","a");
+        if (fp1 == NULL)
+        {
+        printf("Logger         ERROR\n");
 
+        }
+        else
+        {
+            if ((mydata4[0].dataAvailable == true))
+            {
+                
+                for (int i = 0;i< mydata4[0].cpuCores;i++)
+                {
+                    if (i == 0)
+                    {
+                        fprintf(fp1,"%s          %lf\n","cpu",mydata4[i].cpuUsage);
+                    }
+                    else
+                    {
+                        fprintf(fp1,"%s%d         %lf\n","cpu",i,mydata4[i].cpuUsage);
+                    }
+                }
+            }
+            fprintf(fp1,"%s \n","----------------------------------------------------------");
+            fclose(fp1);
+            fp1 = NULL;
+        }
+        pthread_mutex_unlock(&lock1);
         sleep(1);
     }
 
@@ -202,4 +265,11 @@ int getCpuCores()
     fclose(fp);
     fp = NULL;
     return coreNumber;
+}
+
+
+void watchdogCallabck(int sig)
+{
+    printf("\nProgram will be closed, timeout... \n");
+    exit(1);
 }
