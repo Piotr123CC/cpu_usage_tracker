@@ -8,9 +8,10 @@
 #include <stdbool.h>
 #include <signal.h>
 
+#define FILENAME "/proc/stat"
+
 pthread_mutex_t lock1 ;
 volatile sig_atomic_t programStatus =0;
-
 
 
 
@@ -30,48 +31,118 @@ typedef struct{
 
 }cpuData1_t;
 
+
 void* readerThread(void *CpuDataPassed);
 void* analyzerThread(void *CpuDataPassed);
 void* printnerThread(void *CpuDataPassed);
 void* watchdogThread(void *CpuDataPassed);
 void* loggerThread(void *CpuDataPassed);
 
+int getCpuCores();
+
+
+
 int main()
 {
 
+    int cores = getCpuCores();
+    assert (cores > 1);
+    
+    cpuData1_t myCpuData1[cores], *p_myCpuData1;
+
+    p_myCpuData1 = myCpuData1;
+    myCpuData1[0].cpuCores = cores;
     pthread_t Reader, Analyzer, Printer, Watchdog, Logger;
-    pthread_create(&Reader, NULL,(void*)readerThread, NULL);
-    pthread_create(&Analyzer, NULL,(void*)analyzerThread, NULL);
-    pthread_create(&Printer, NULL,(void*)printnerThread, NULL);
-    pthread_create(&Watchdog, NULL,(void*)watchdogThread, NULL);
-    pthread_create(&Logger, NULL,(void*)loggerThread, NULL);
+    pthread_create(&Reader, NULL,(void*)readerThread, (void*)p_myCpuData1);
+    pthread_create(&Analyzer, NULL,(void*)analyzerThread, (void*)p_myCpuData1);
+    // pthread_create(&Printer, NULL,(void*)printnerThread, (void*)p_myCpuData1);
+    // pthread_create(&Watchdog, NULL,(void*)watchdogThread, (void*)p_myCpuData1);
+    // pthread_create(&Logger, NULL,(void*)loggerThread, (void*)p_myCpuData1);
     pthread_join(Reader,NULL);
     pthread_join(Analyzer,NULL);
-    pthread_join(Printer,NULL);
-    pthread_join(Watchdog, NULL);
-    pthread_join(Logger, NULL);
+    // pthread_join(Printer,NULL);
+    // pthread_join(Watchdog, NULL);
+    // pthread_join(Logger, NULL);
     pthread_exit(NULL);
     return 0;
 }
 
 void* readerThread(void *CpuDataPassed)
 {
- 
+    cpuData1_t *myData;
+    FILE *fp = NULL;
+    myData = (cpuData1_t *)CpuDataPassed;
     while (!programStatus)
     {
-      
+        pthread_mutex_lock(&lock1);
+        fp = fopen(FILENAME,"r");
+        if (fp == NULL)
+        {
+            return 0;
+        }
+        int charCounter =0;
+        char ch;
+        char name[20];
+        if (fp == NULL)
+        {
+
+            myData[0].dataAvailable = false;
+        }
+        else 
+        {
+            charCounter =0;
+        
+            while ( charCounter < myData[0].cpuCores)
+            {
+                fscanf(fp,"%s %ld %ld %ld %ld %ld %ld %ld %ld %ld",name, &(myData[charCounter].user), &(myData[charCounter].nice), &(myData[charCounter].system),
+                                                                                &(myData[charCounter].idle), &(myData[charCounter].iowait), &(myData[charCounter].irq),
+                                                                                &(myData[charCounter].softirq), &(myData[charCounter].steal), &(myData[charCounter].guest));
+
+                while ((ch = fgetc(fp)) != '\n' );
+
+                charCounter++;
+            }
+        
+
+        fclose(fp);
+        fp = NULL;
+        }
+        pthread_mutex_unlock(&lock1);
         sleep(1);
     }
-  
+   
 }
 
 
 void* analyzerThread(void *CpuDataPassed)
 {
+    cpuData1_t *myData1;
+
+    myData1 = (cpuData1_t *)CpuDataPassed; 
    
     while(!programStatus)
     {
 
+        static unsigned long prevIdle[5], prevSum[5];
+        unsigned long currentSum[5];
+
+        pthread_mutex_lock(&lock1);
+        for (int i =0; i < myData1[0].cpuCores;i++)
+        {
+            currentSum[i]= (myData1[i].user+myData1[i].nice+myData1[i].system+myData1[i].idle+
+                            myData1[i].iowait+myData1[i].irq+myData1[i].softirq);
+            
+            if (prevSum[i] == currentSum[i])
+            {
+                myData1[0].dataAvailable = false;
+                break;
+            }
+            myData1[i].cpuUsage = 100.0 - (myData1[i].idle - prevIdle[i])*100.0/(currentSum[i]-prevSum[i]);
+            prevIdle[i] = myData1[i].idle;
+            prevSum[i] = currentSum[i];
+            myData1[0].dataAvailable = true;
+        }
+        pthread_mutex_unlock(&lock1);
         sleep(1);
     }
 
@@ -107,4 +178,28 @@ void* loggerThread(void *CpuDataPassed)
         sleep(1);
     }
 
+}
+
+
+int getCpuCores()
+{
+    FILE *fp = NULL;
+    fp = fopen(FILENAME,"r");
+    if (fp == NULL)
+    {
+        return 0;
+    }
+    int coreNumber =0;
+    char str[80];
+    char cpu[] = "cpu";
+    while (fgets(str,80,fp))
+    {   
+        if (strncmp(cpu,str,3) == 0)
+        {
+            coreNumber++;
+        }
+    }
+    fclose(fp);
+    fp = NULL;
+    return coreNumber;
 }
