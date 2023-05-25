@@ -10,9 +10,6 @@
 
 #define FILENAME "/proc/stat"
 
-
-
-
 typedef struct{
  	unsigned long   user; 	            //Time spent with normal processing in user mode.
  	unsigned long   nice; 	            //Time spent with niced processes in user mode.
@@ -61,11 +58,28 @@ threadError_t getRawData(cpuData1_t *fileData, FILE *handle);
 threadError_t convertData(cpuData1_t *rawData);
 threadError_t saveLogData(cpuData1_t *convertedData, FILE *fp);
 threadError_t feedWatchdog(cpuData1_t *isDataAvailable);
+// void interrupt(int sig);
+// void term(int sig);
+
 
 pthread_mutex_t lock1 ;
 volatile sig_atomic_t programStatus =0;
 
 logData_t logData = {0,0,0,0,0};
+
+void term(int sig)
+{
+    printf("Program was termianted\n");
+    sleep(2);
+    programStatus = 1;
+
+}
+
+void interrupt(int sig)
+{
+    printf("Program was interrupted\n");
+    raise(SIGTERM);
+}
 
 
 int main()
@@ -75,9 +89,16 @@ int main()
     assert (cores > 1);
     
     cpuData1_t myCpuData1[cores], *p_myCpuData1;
-
     p_myCpuData1 = myCpuData1;
     myCpuData1[0].cpuCores = cores;
+
+    signal(SIGINT,interrupt);
+
+    struct sigaction action;
+    memset(&action, 0, sizeof(struct sigaction));
+    action.sa_handler = term;
+    sigaction(SIGTERM, &action, NULL);
+
     pthread_t Reader, Analyzer, Printer, Watchdog, Logger;
     pthread_create(&Reader, NULL,(void*)readerThread, (void*)p_myCpuData1);
     pthread_create(&Analyzer, NULL,(void*)analyzerThread, (void*)p_myCpuData1);
@@ -468,7 +489,5 @@ threadError_t saveLogData(cpuData1_t *convertedData, FILE *fp)
     }
     
 }
-
-
 
 
