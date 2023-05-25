@@ -10,8 +10,6 @@
 
 #define FILENAME "/proc/stat"
 
-pthread_mutex_t lock1 ;
-volatile sig_atomic_t programStatus =0;
 
 
 
@@ -31,6 +29,24 @@ typedef struct{
 
 }cpuData1_t;
 
+typedef enum threadError_t{
+    threadOK, 
+    readerError,
+    analyzerError,
+    printerError,
+    watchdogError,
+    loggerError,
+}threadError_t;
+
+typedef struct{
+    bool readerError;
+    bool analyzerError;   
+    bool printerError;   
+    bool watchdogError;   
+    bool loggerError;     
+}logData_t;
+
+
 
 void* readerThread(void *CpuDataPassed);
 void* analyzerThread(void *CpuDataPassed);
@@ -39,7 +55,17 @@ void* watchdogThread(void *CpuDataPassed);
 void* loggerThread(void *CpuDataPassed);
 
 int getCpuCores();
-void watchdogCallabck(int sig);
+void watchdogCallback(int sig);
+threadError_t printData(cpuData1_t *convertedData1);
+threadError_t getRawData(cpuData1_t *fileData, FILE *handle);
+threadError_t convertData(cpuData1_t *rawData);
+threadError_t saveLogData(cpuData1_t *convertedData, FILE *fp);
+threadError_t feedWatchdog(cpuData1_t *isDataAvailable);
+
+pthread_mutex_t lock1 ;
+volatile sig_atomic_t programStatus =0;
+
+logData_t logData = {0,0,0,0,0};
 
 
 int main()
@@ -75,42 +101,20 @@ void* readerThread(void *CpuDataPassed)
     while (!programStatus)
     {
         pthread_mutex_lock(&lock1);
-        fp = fopen(FILENAME,"r");
-        if (fp == NULL)
+        if (getRawData(myData, fp) != 0)
         {
-            return 0;
+            logData.readerError = true;
         }
-        int charCounter =0;
-        char ch;
-        char name[20];
-        if (fp == NULL)
+        else
         {
-
-            myData[0].dataAvailable = false;
-        }
-        else 
-        {
-            charCounter =0;
-        
-            while ( charCounter < myData[0].cpuCores)
-            {
-                fscanf(fp,"%s %ld %ld %ld %ld %ld %ld %ld %ld %ld",name, &(myData[charCounter].user), &(myData[charCounter].nice), &(myData[charCounter].system),
-                                                                                &(myData[charCounter].idle), &(myData[charCounter].iowait), &(myData[charCounter].irq),
-                                                                                &(myData[charCounter].softirq), &(myData[charCounter].steal), &(myData[charCounter].guest));
-
-                while ((ch = fgetc(fp)) != '\n' );
-
-                charCounter++;
-            }
-        
-
-        fclose(fp);
-        fp = NULL;
+            logData.readerError = false;
         }
         pthread_mutex_unlock(&lock1);
         sleep(1);
     }
-   
+    fclose(fp);
+    fp = NULL;
+    
 }
 
 
@@ -119,33 +123,23 @@ void* analyzerThread(void *CpuDataPassed)
     cpuData1_t *myData1;
 
     myData1 = (cpuData1_t *)CpuDataPassed; 
-   
+
     while(!programStatus)
     {
-
-        static unsigned long prevIdle[5], prevSum[5];
-        unsigned long currentSum[5];
-
         pthread_mutex_lock(&lock1);
-        for (int i =0; i < myData1[0].cpuCores;i++)
+        
+        if (convertData(myData1) != 0)
         {
-            currentSum[i]= (myData1[i].user+myData1[i].nice+myData1[i].system+myData1[i].idle+
-                            myData1[i].iowait+myData1[i].irq+myData1[i].softirq);
-            
-            if (prevSum[i] == currentSum[i])
-            {
-                myData1[0].dataAvailable = false;
-                break;
-            }
-            myData1[i].cpuUsage = 100.0 - (myData1[i].idle - prevIdle[i])*100.0/(currentSum[i]-prevSum[i]);
-            prevIdle[i] = myData1[i].idle;
-            prevSum[i] = currentSum[i];
-            myData1[0].dataAvailable = true;
+            logData.analyzerError = true;
+        }
+        else
+        {
+            logData.analyzerError = false;            
         }
         pthread_mutex_unlock(&lock1);
         sleep(1);
     }
-
+   
 }
 
 
@@ -153,94 +147,72 @@ void* printnerThread(void *CpuDataPassed)
 {
     cpuData1_t *myData2;
     myData2 = (cpuData1_t *)CpuDataPassed;
-
     while (!programStatus)
     {   
-        static double prevTotal = 0;
-        system("clear");
-        for (int i = 0;i< myData2[0].cpuCores;i++)
+        pthread_mutex_lock(&lock1);
+        if (myData2[0].dataAvailable == true)
         {
-            
-            if (i == 0)
+            if (printData(myData2) != 0)
             {
-                printf("Cpu total   %lf  \n",myData2[i].cpuUsage);
-                if (myData2[i].cpuUsage == 0.0000000000000)
-                {
-                    break;
-                }
-                else if (prevTotal ==  myData2[0].cpuUsage) 
-                {
-                    break;
-                }
+                logData.printerError = true;
+                myData2[0].dataAvailable = false;
+
             }
             else
             {
-                printf("Cpu %d       %lf  \n",i,myData2[i].cpuUsage);
+                logData.printerError = false;
             }
+        }
+        pthread_mutex_unlock(&lock1);
+        sleep(1);
     }
-    prevTotal = myData2[0].cpuUsage; 
-    sleep(1);
-    }
+   
 }
 
 void* watchdogThread(void *CpuDataPassed)
 {
     cpuData1_t *myData3;
     myData3 = (cpuData1_t *)CpuDataPassed;
-    signal(SIGALRM, watchdogCallabck);
+    signal(SIGALRM, watchdogCallback);
     alarm(2);
     while(!programStatus)
     {
-        if (myData3[0].dataAvailable == true)
+        if (feedWatchdog(myData3) != 0)
         {
-            alarm(2);
+            logData.watchdogError = true;
         }
-        usleep(250000);
+        else
+        {
+            logData.watchdogError = false;
+        }
     }
    
 }
+
 
 void* loggerThread(void *CpuDataPassed)
 {
     FILE *fp1 = NULL;
     cpuData1_t *mydata4;
     mydata4 = (cpuData1_t *)CpuDataPassed;
-    
+
     while (!programStatus)
     {   
-       
-        pthread_mutex_lock(&lock1);
-        fp1 = fopen("logData.txt","a");
-        if (fp1 == NULL)
-        {
-        printf("Logger         ERROR\n");
 
+        pthread_mutex_lock(&lock1);
+        if (saveLogData(mydata4, fp1) != 0)
+        {
+            logData.loggerError = true;
         }
         else
         {
-            if ((mydata4[0].dataAvailable == true))
-            {
-                
-                for (int i = 0;i< mydata4[0].cpuCores;i++)
-                {
-                    if (i == 0)
-                    {
-                        fprintf(fp1,"%s          %lf\n","cpu",mydata4[i].cpuUsage);
-                    }
-                    else
-                    {
-                        fprintf(fp1,"%s%d         %lf\n","cpu",i,mydata4[i].cpuUsage);
-                    }
-                }
-            }
-            fprintf(fp1,"%s \n","----------------------------------------------------------");
-            fclose(fp1);
-            fp1 = NULL;
+            logData.loggerError = false;
         }
         pthread_mutex_unlock(&lock1);
         sleep(1);
     }
-
+    fp1 = NULL;
+  
 }
 
 
@@ -268,8 +240,235 @@ int getCpuCores()
 }
 
 
-void watchdogCallabck(int sig)
+threadError_t feedWatchdog(cpuData1_t *isDataAvailable)
 {
+    if (isDataAvailable[0].dataAvailable == true)
+        {
+            int seconds = alarm(2);
+           if ( seconds < 0 )
+           {
+                return logData.watchdogError;
+           }
+        }
+        usleep(250000);
+}
+
+void watchdogCallback(int sig)
+{
+    printf("Error code: ");
+    if (logData.readerError)
+    {
+        printf("%d",logData.readerError);
+    }
+    else
+    {
+        printf("0");
+    }
+
+    if (logData.analyzerError)
+    {
+        printf("%d",logData.analyzerError);
+    }
+    else
+    {
+        printf("0");
+    }
+
+    if (logData.printerError)
+    {
+        printf("%d",logData.printerError);
+    }
+    else
+    {
+        printf("0");
+    }
+
+    if (logData.loggerError)
+    {
+        printf("%d",logData.loggerError);
+    }
+    else
+    {
+        printf("0");
+    }
+
+    if (logData.readerError)
+    {
+        printf("%d",logData.readerError);
+    }
+    else
+    {
+        printf("0");
+    }
     printf("\nProgram will be closed, timeout... \n");
     exit(1);
 }
+
+
+threadError_t printData(cpuData1_t *convertedData)
+{
+    static double prevTotal = 0;
+    system("clear");
+    for (int i = 0;i< convertedData[0].cpuCores;i++)
+    {
+        
+        if (i == 0)
+        {
+            printf("Cpu total   %lf  \n",convertedData[i].cpuUsage);
+            if (convertedData[i].cpuUsage == 0.0000000000000)
+            {
+                return printerError;
+            }
+            else if (prevTotal ==  convertedData[0].cpuUsage) 
+            {
+                return printerError;
+            }
+        }
+        else
+        {
+            printf("Cpu %d       %lf  \n",i,convertedData[i].cpuUsage);
+        }
+    }
+    prevTotal = convertedData[0].cpuUsage; 
+    return threadOK;   
+}
+
+threadError_t getRawData(cpuData1_t *fileData, FILE *handle)
+{
+    handle = fopen(FILENAME, "r");
+     
+    int charCounter =0;
+    char ch;
+    char name[20];
+    if (handle == NULL)
+    {
+        
+        fileData[0].dataAvailable = false;
+        return readerError;
+    }
+    else 
+    {
+        charCounter =0;
+       
+        while ( charCounter < fileData[0].cpuCores)
+        {
+            fscanf(handle,"%s %ld %ld %ld %ld %ld %ld %ld %ld %ld",name, &(fileData[charCounter].user), &(fileData[charCounter].nice), &(fileData[charCounter].system),
+                                                                            &(fileData[charCounter].idle), &(fileData[charCounter].iowait), &(fileData[charCounter].irq),
+                                                                            &(fileData[charCounter].softirq), &(fileData[charCounter].steal), &(fileData[charCounter].guest));
+
+            while ((ch = fgetc(handle)) != '\n' );
+
+            charCounter++;
+        }
+
+    fclose(handle);
+    handle = NULL;
+    }
+
+    return threadOK;
+}
+
+threadError_t convertData(cpuData1_t *rawData)
+{
+    static unsigned long prevIdle[5], prevSum[5];
+    unsigned long currentSum[5];
+    for (int i =0; i < rawData[0].cpuCores;i++)
+    {
+        currentSum[i]= (rawData[i].user+rawData[i].nice+rawData[i].system+rawData[i].idle+
+                        rawData[i].iowait+rawData[i].irq+rawData[i].softirq);
+        
+        if (prevSum[i] == currentSum[i])
+        {
+            rawData[0].dataAvailable = false; 
+            return analyzerError;
+        }
+        rawData[i].cpuUsage = 100.0 - (rawData[i].idle - prevIdle[i])*100.0/(currentSum[i]-prevSum[i]);
+
+        if (rawData[i].cpuUsage <= 0)
+        {
+            return analyzerError;
+        }
+        prevIdle[i] = rawData[i].idle;
+        prevSum[i] = currentSum[i];
+        rawData[0].dataAvailable = true;
+    }
+    return threadOK;
+}
+
+
+threadError_t saveLogData(cpuData1_t *convertedData, FILE *fp)
+{
+    fp=fopen("logData.txt","a");
+
+    if (fp == NULL)
+    {
+        printf("Logger         ERROR\n");
+        return loggerError;
+    }
+    else
+    {
+        if ((convertedData[0].dataAvailable == true))
+        {
+            
+            for (int i = 0;i< convertedData[0].cpuCores;i++)
+            {
+                if (i == 0)
+                {
+                    fprintf(fp,"%s          %lf\n","cpu",convertedData[i].cpuUsage);
+                }
+                else
+                {
+                    fprintf(fp,"%s%d         %lf\n","cpu",i,convertedData[i].cpuUsage);
+                }
+            }
+        }
+        fprintf(fp,"%s \n","----------------------------------------------------------");
+        if (logData.readerError == true)
+        {
+            fprintf(fp,"%s           %s\n","Reader","ERROR");
+        }
+        else
+        {
+            fprintf(fp,"%s           %s\n","Reader","OK");
+        }
+
+        if (logData.analyzerError == true)
+        {
+            fprintf(fp,"%s         %s\n","Analyzer","ERROR");
+        }
+        else
+        {
+            fprintf(fp,"%s         %s\n","Analyzer","OK");
+        }
+
+        if (logData.printerError == true)
+        {
+            fprintf(fp,"%s          %s\n","Printer","ERROR");
+        }
+        else
+        {
+            fprintf(fp,"%s          %s\n","Printer","OK");
+        }
+
+        if (logData.watchdogError == true)
+        {
+            fprintf(fp,"%s         %s\n","Watchdog","ERROR");
+        }
+        else
+        {
+            fprintf(fp,"%s         %s\n","Watchdog","OK");
+        }
+
+        fprintf(fp,"%s           %s\n","Logger","OK");
+
+        fprintf(fp,"%s \n","------------------------------------------------------------------------------------");
+        fclose(fp);
+        fp = NULL;
+        return threadOK;
+    }
+    
+}
+
+
+
+
