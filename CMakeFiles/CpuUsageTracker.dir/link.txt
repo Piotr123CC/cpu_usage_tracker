@@ -1,1 +1,0 @@
-/usr/bin/cc CMakeFiles/CpuUsageTracker.dir/Src/main.c.o CMakeFiles/CpuUsageTracker.dir/Src/threads.c.o CMakeFiles/CpuUsageTracker.dir/Src/algorithm.c.o CMakeFiles/CpuUsageTracker.dir/Src/others.c.o CMakeFiles/CpuUsageTracker.dir/Src/queue.c.o -o CpuUsageTracker 

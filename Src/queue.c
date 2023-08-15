@@ -1,16 +1,11 @@
 #include "../Inc/queue.h"
 
-
-
-
-
 void queueInit(queue_t *buffer)
 {
     buffer->dataSize=0;
     buffer->head = 0;
     for (size_t i = 0;i<SIZE;i++)
     {
-        // buffer->data[i].core = 0;
         buffer->data[i].cpuUsage = 0;
         buffer->data[i].guest = 0;
         buffer->data[i].idle = 0;
@@ -21,7 +16,6 @@ void queueInit(queue_t *buffer)
         buffer->data[i].steal = 0;
         buffer->data[i].system = 0;
         buffer->data[i].user = 0;
-       
     }
 }
 

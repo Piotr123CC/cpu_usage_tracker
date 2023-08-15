@@ -21,7 +21,10 @@ void getRawData(queue_t *data)
         while ( (c = fgetc(inputFile)) != '\n');
     }
 
-    fclose(inputFile);
+    if (fclose(inputFile) != 0)
+    {
+        perror("Closeing error");
+    }
     inputFile = NULL;
 }
 
@@ -31,13 +34,18 @@ void processData(queue_t *data)
     if (data->dataSize>=SIZE)
     {
         calculateCpuPercentage(data);
-        printf("cpu %.2f \n cpu0 %.2f \n cpu1 %.2f \n cpu2 %.2f \n cpu3 %.2f \n",data->coresPercentageTable[0],
-                                                                                 data->coresPercentageTable[1],
-                                                                                 data->coresPercentageTable[2],
-                                                                                 data->coresPercentageTable[3],
-                                                                                 data->coresPercentageTable[4]);
     }
 }
+
+void printData(queue_t *data)
+{
+    system("clear");
+    for (int i =0;i<data->coresNumber;i++)
+    {
+        printf("%s %.2f \n ",data->data[i].core, data->coresPercentageTable[i]);
+    }
+}
+
 
 int getCoresNumber(void)
 {
@@ -60,7 +68,11 @@ int getCoresNumber(void)
             cores++;
         }
     }
-    fclose(inputFile);
+    if (fclose(inputFile) != 0)
+    {
+        perror("Closeing file error");
+    }
     inputFile = NULL;
     return cores;
 }
+

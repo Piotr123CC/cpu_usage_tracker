@@ -1,3 +1,0 @@
-/home/piotr/Desktop/CpuUsageTracker/CMakeFiles/CpuUsageTracker.dir
-/home/piotr/Desktop/CpuUsageTracker/CMakeFiles/edit_cache.dir
-/home/piotr/Desktop/CpuUsageTracker/CMakeFiles/rebuild_cache.dir
