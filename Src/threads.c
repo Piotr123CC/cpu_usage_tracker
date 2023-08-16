@@ -3,34 +3,50 @@
 
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
-static pthread_cond_t printCondition = PTHREAD_COND_INITIALIZER;
+static pthread_cond_t printCondition = PTHREAD_COND_INITIALIZER,
+                      watchdogCondition = PTHREAD_COND_INITIALIZER;
 
-static bool isDataProcessed = false;
+static bool isDataProcessed = false, isDataPrinted = false;
 
 volatile sig_atomic_t programStatus = 1;
 
-static struct sigaction action;
+static struct sigaction terminate, interrupt;
+
+logData_t errors = {};
 
 void sigHandler(int signum)
 {
     if (signum == SIGTERM)
     {
-        
-        programStatus = 0;
-        pthread_mutex_destroy(&lock);
-        pthread_cond_destroy(&printCondition);
-        sleep(1);
-        printf("Mutex and cond destroy\n");
+        printf("SIGTERM cought \n");
     }
+
+    if (signum == SIGALRM)
+    {
+        printf("SIGALARM cought \n");
+
+    }
+    if (signum == SIGINT)
+    {
+        printf("SIGINT cought \n");
+    }
+    programStatus = 0;
+    pthread_mutex_destroy(&lock);
+    pthread_cond_destroy(&printCondition);
+    pthread_cond_destroy(&watchdogCondition);
+    printf("Mutex and cond destroy\n");
+
 }
 
 
 void* readerThread(void *CpuDataPassed)
 {
     queue_t *data= (queue_t *)CpuDataPassed;
-    // action.sa= 
-    action.sa_handler = &sigHandler;
-    sigaction(SIGTERM, &action, NULL);
+
+    terminate.sa_handler = &sigHandler;
+    interrupt.sa_handler = &sigHandler;
+    sigaction(SIGTERM, &terminate, NULL);
+    sigaction(SIGINT, &interrupt, NULL);
     while(programStatus)
     {
         sleep(1);
@@ -38,7 +54,7 @@ void* readerThread(void *CpuDataPassed)
         getRawData(data);
         pthread_mutex_unlock(&lock);
     }
-    printf("close reader thread \n");
+
 }
 
 
@@ -56,8 +72,6 @@ void* analyzerThread(void *CpuDataPassed)
         pthread_mutex_unlock(&lock);
 
     }
-
-    printf("Close analyzer thread \n");
 }
 
 
@@ -74,8 +88,27 @@ void* printnerThread(void *CpuDataPassed)
         }
         printData(data);
         isDataProcessed = false;
+        isDataPrinted = true;
+        pthread_cond_signal(&watchdogCondition);
         pthread_mutex_unlock(&lock);
+    
     }   
-    sleep(1);
-    printf("Close print thread \n");
+}
+
+void* watchdogThread(void)
+{
+    alarm(5);
+    signal(SIGALRM, sigHandler);
+    while (programStatus)
+    {
+        pthread_mutex_lock(&lock);
+        while (!isDataPrinted)
+        {
+            pthread_cond_wait(&watchdogCondition, &lock);
+        }
+        alarm(2);
+        isDataPrinted = false;
+        
+        pthread_mutex_unlock(&lock);
+    }
 }

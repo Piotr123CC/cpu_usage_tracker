@@ -1,9 +1,11 @@
 #include "../Inc/queue.h"
 
-void queueInit(queue_t *buffer)
+void queueInit(queue_t *buffer, const int coresNumber)
 {
+    buffer->coresNumber = coresNumber;
     buffer->dataSize=0;
     buffer->head = 0;
+
     for (size_t i = 0;i<SIZE;i++)
     {
         buffer->data[i].cpuUsage = 0;
@@ -17,6 +19,9 @@ void queueInit(queue_t *buffer)
         buffer->data[i].system = 0;
         buffer->data[i].user = 0;
     }
+
+    buffer->p_data = buffer->data;
+    buffer->coresPercentageTable = (float *)calloc(buffer->coresNumber, sizeof(float));
 }
 
 void putIntoQueue(queue_t *buffer, FILE *inputFile)
@@ -37,4 +42,13 @@ void putIntoQueue(queue_t *buffer, FILE *inputFile)
 
     buffer->head = ++(buffer->head) % SIZE; 
 
+}
+
+void queueDeInit(queue_t *buffer)
+{
+    buffer->dataSize=0;
+    buffer->head = 0;
+    printf("Queue destroyed \n");
+    free(buffer->coresPercentageTable);
+    buffer->p_data = NULL;    
 }

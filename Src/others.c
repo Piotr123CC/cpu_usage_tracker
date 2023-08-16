@@ -8,7 +8,7 @@ void getRawData(queue_t *data)
 
     inputFile = fopen(FILE_NAME, "r");
 
-    if (inputFile == 0)
+    if (inputFile == NULL)
     {
         perror("Openning error");
     }

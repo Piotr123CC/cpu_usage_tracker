@@ -1,26 +1,76 @@
 #include "../Inc/main.h"
 
-int main()
+int main(int argc, char *argv[])
 {
     pthread_t Reader, Analyzer, Printer, Watchdog, Logger;
 
-    queue_t cpuData = {}, *p_cpuData;
-    cpuData.coresNumber = getCoresNumber();
-    cpuData.coresPercentageTable = (float *)calloc(cpuData.coresNumber, sizeof(float));
-    queueInit(&cpuData);
-    p_cpuData = &cpuData;
-    pthread_create(&Reader, NULL,(void*)readerThread, (void *)p_cpuData);
-    pthread_create(&Analyzer, NULL,(void*)analyzerThread, (void *)p_cpuData);
-    pthread_create(&Printer, NULL,(void*)printnerThread, (void *)p_cpuData);
-    pthread_join(Reader, NULL);
-    pthread_join(Analyzer,NULL);
-    pthread_join(Printer,NULL);
-    free(cpuData.coresPercentageTable);
-    pthread_exit(NULL);
+    queue_t cpuData = {} ;
+     
+    queueInit(&cpuData, getCoresNumber());
     
-    cpuData.coresPercentageTable = 0;
-    p_cpuData = NULL;
-    sleep(1);
-    printf("Memory freed \n");
+    int status;
+    status= pthread_create(&Reader, NULL,(void*)readerThread, (void *)cpuData.p_data);
+    if ( status != 0)
+    {
+        perror("Thread creating error");
+    }
+
+    status=pthread_create(&Analyzer, NULL,(void*)analyzerThread, (void *)cpuData.p_data);
+    if ( status != 0)
+    {
+        perror("Thread creating error");
+    }
+
+    status=pthread_create(&Printer, NULL,(void*)printnerThread, (void *)cpuData.p_data);
+    if ( status != 0)
+    {
+        perror("Thread creating error");
+    }
+
+    status=pthread_create(&Logger, NULL,(void*)loggerThread, (void *)cpuData.p_data);
+    if ( status != 0)
+    {
+        perror("Thread creating error");
+    }
+
+    status=pthread_create(&Watchdog, NULL,(void*)watchdogThread, NULL);
+    if ( status != 0)
+    {
+        perror("Thread creating error");
+    }
+
+    status = pthread_join(Reader, NULL);
+    if ( status != 0)
+    {
+        perror("Thread joining error");
+    }
+
+    status =pthread_join(Analyzer,NULL);
+    if ( status != 0)
+    {
+        perror("Thread joining error");
+    }
+    status =pthread_join(Printer,NULL);
+    if ( status != 0)
+    {
+        perror("Thread joining error");
+    }
+
+    status =pthread_join(Watchdog,NULL);
+    if ( status != 0)
+    {
+        perror("Thread joining error");
+    }
+
+    status =pthread_join(Logger,NULL);
+    if ( status != 0)
+    {
+        perror("Thread joining error");
+    }
+    
+    queueDeInit(&cpuData);
+
+    pthread_exit(NULL);
+
     return 0;
 }

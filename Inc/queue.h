@@ -2,6 +2,7 @@
 #define _QUEUE_H_
 #include "stdio.h"
 #include "stdbool.h"
+#include "malloc.h"
 
 #define SIZE 10
 
@@ -16,7 +17,6 @@ typedef struct cpuData_t{
  	unsigned long   steal; 	    //Time stolen by other operating systems running in a virtual environment. 	
  	unsigned long   guest; 	    //Time spent for running a virtual CPU or guest OS under the control of the kernel. 
     double          cpuUsage;   
-    bool            dataAvailable;
     char            core[5];
 
 }cpuData_t;
@@ -24,15 +24,17 @@ typedef struct cpuData_t{
 
 typedef struct{
     cpuData_t  data[SIZE];
+	cpuData_t *p_data;
     int head, dataSize;
 	int coresNumber;
 	float *coresPercentageTable;
 }queue_t;
 
 
-void queueInit(queue_t *buffer);
+void queueInit(queue_t *buffer, const int coresNumber);
 
 void putIntoQueue(queue_t *buffer, FILE *inputFile);
 
+void queueDeInit(queue_t *buffer);
 
 #endif
