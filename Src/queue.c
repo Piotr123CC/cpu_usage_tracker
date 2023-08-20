@@ -1,4 +1,4 @@
-#include "../Inc/queue.h"
+#include "../Inc/main.h"
 
 void queueInit(queue_t *buffer, const int coresNumber)
 {
@@ -24,7 +24,7 @@ void queueInit(queue_t *buffer, const int coresNumber)
     buffer->coresPercentageTable = (float *)calloc(buffer->coresNumber, sizeof(float));
 }
 
-void putIntoQueue(queue_t *buffer, FILE *inputFile)
+error_t putIntoQueue(queue_t *buffer, FILE *inputFile)
 {
 
     int i = buffer->head;
@@ -33,15 +33,21 @@ void putIntoQueue(queue_t *buffer, FILE *inputFile)
         buffer->dataSize++;
     }
 
-
-    fscanf(inputFile,"%s %ld %ld %ld %ld %ld %ld %ld %ld %ld ",(buffer->data[i].core),&(buffer->data[i].user),
+    int status;
+    status = fscanf(inputFile,"%s %ld %ld %ld %ld %ld %ld %ld %ld %ld ",(buffer->data[i].core),&(buffer->data[i].user),
                                                               &(buffer->data[i].nice), &(buffer->data[i].system),
                                                               &(buffer->data[i].idle), &(buffer->data[i].iowait),
                                                               &(buffer->data[i].irq), &(buffer->data[i].softirq),
                                                               &(buffer->data[i].steal), &(buffer->data[i].guest));
 
+    if (status < 10)
+    {
+        return ERROR;
+    }
+
     buffer->head = ++(buffer->head) % SIZE; 
 
+    return OK;
 }
 
 void queueDeInit(queue_t *buffer)

@@ -6,10 +6,11 @@
 #include <signal.h>
 
 typedef struct {
-    char reader[30];
-    char analyzer[30];
-    char printner[30];
+    char reader[50];
+    char analyzer[50];
+    char printner[50];
 }logData_t;
+
 
 void* readerThread(void *CpuDataPassed);
 void* analyzerThread(void *CpuDataPassed);

@@ -3,8 +3,7 @@
 
 #include "main.h"
 
-
-void calculateCpuPercentage(queue_t *data);
+error_t calculateCpuPercentage(queue_t *data);
 
 
 #endif 

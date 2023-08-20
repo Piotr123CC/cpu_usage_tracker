@@ -1,8 +1,5 @@
 #ifndef _QUEUE_H_
 #define _QUEUE_H_
-#include "stdio.h"
-#include "stdbool.h"
-#include "malloc.h"
 
 #define SIZE 10
 
@@ -31,9 +28,11 @@ typedef struct{
 }queue_t;
 
 
+#include "main.h"
+
 void queueInit(queue_t *buffer, const int coresNumber);
 
-void putIntoQueue(queue_t *buffer, FILE *inputFile);
+error_t putIntoQueue(queue_t *buffer, FILE *inputFile);
 
 void queueDeInit(queue_t *buffer);
 

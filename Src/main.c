@@ -1,6 +1,8 @@
 #include "../Inc/main.h"
 
-int main(int argc, char *argv[])
+
+
+int main()
 {
     pthread_t Reader, Analyzer, Printer, Watchdog, Logger;
 

@@ -2,7 +2,7 @@
 
 
 
-void calculateCpuPercentage(queue_t *data)
+error_t calculateCpuPercentage(queue_t *data)
 {
     float percentage = 0;
     int current, previous ;
@@ -38,6 +38,13 @@ void calculateCpuPercentage(queue_t *data)
 
 
         percentage = 100.0 - (idled*100.00/(float)totald);
+        if (percentage < 0.01 || percentage > 100.0)
+        {
+            return ERROR;
+        }
         data->coresPercentageTable[i] = percentage;
+        float cpu = data->coresPercentageTable[i];
+        
     }
+    return OK;
 }

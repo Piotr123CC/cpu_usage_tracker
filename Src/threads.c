@@ -54,7 +54,6 @@ void* readerThread(void *CpuDataPassed)
         getRawData(data);
         pthread_mutex_unlock(&lock);
     }
-
 }
 
 
@@ -110,5 +109,16 @@ void* watchdogThread(void)
         isDataPrinted = false;
         
         pthread_mutex_unlock(&lock);
+    }
+}
+
+void* loggerThread(void)
+{
+    while(programStatus)
+    {
+        pthread_mutex_lock(&lock);
+        checkLogs();
+        pthread_mutex_unlock(&lock);
+        sleep(1);
     }
 }
