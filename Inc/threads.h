@@ -6,9 +6,10 @@
 #include <signal.h>
 
 typedef struct {
-    char reader[50];
-    char analyzer[50];
-    char printner[50];
+    char reader[100];
+    char analyzer[100];
+    char printner[100];
+    char watchDog[50];
 }logData_t;
 
 

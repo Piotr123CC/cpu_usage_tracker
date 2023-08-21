@@ -54,7 +54,6 @@ void queueDeInit(queue_t *buffer)
 {
     buffer->dataSize=0;
     buffer->head = 0;
-    printf("Queue destroyed \n");
     free(buffer->coresPercentageTable);
     buffer->p_data = NULL;    
 }

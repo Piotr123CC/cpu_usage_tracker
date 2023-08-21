@@ -16,25 +16,27 @@ logData_t errors = {};
 
 void sigHandler(int signum)
 {
+    programStatus = 0;
+    sleep(1);
     if (signum == SIGTERM)
     {
-        printf("SIGTERM cought \n");
+        printf("Program killed \n");
     }
 
     if (signum == SIGALRM)
     {
-        printf("SIGALARM cought \n");
-
+        printf("Timeout... \n");
+        strcat(errors.watchDog,"timeout");
+        makeLogFile(errors.watchDog,"Watchdog: ");
     }
     if (signum == SIGINT)
     {
-        printf("SIGINT cought \n");
+        printf("Program was interrupted\n");
     }
-    programStatus = 0;
+    
     pthread_mutex_destroy(&lock);
     pthread_cond_destroy(&printCondition);
     pthread_cond_destroy(&watchdogCondition);
-    printf("Mutex and cond destroy\n");
 
 }
 
@@ -47,6 +49,8 @@ void* readerThread(void *CpuDataPassed)
     interrupt.sa_handler = &sigHandler;
     sigaction(SIGTERM, &terminate, NULL);
     sigaction(SIGINT, &interrupt, NULL);
+
+
     while(programStatus)
     {
         sleep(1);
@@ -71,6 +75,7 @@ void* analyzerThread(void *CpuDataPassed)
         pthread_mutex_unlock(&lock);
 
     }
+    
 }
 
 
@@ -81,17 +86,22 @@ void* printnerThread(void *CpuDataPassed)
     {
         pthread_mutex_lock(&lock);
 
-        while (!isDataProcessed)
+        while (!isDataProcessed )
         {
             pthread_cond_wait(&printCondition, &lock);
         }
-        printData(data);
+        
+        if (data->dataSize>= SIZE)
+        {
+            printData(data);
+        }
+        
         isDataProcessed = false;
         isDataPrinted = true;
         pthread_cond_signal(&watchdogCondition);
         pthread_mutex_unlock(&lock);
-    
     }   
+    system("clear");
 }
 
 void* watchdogThread(void)

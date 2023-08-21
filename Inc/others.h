@@ -10,7 +10,6 @@ error_t processData(queue_t *data);
 error_t printData(queue_t *data);
 int getCoresNumber(void);
 error_t checkLogs(void);
-error_t makeLogFile(const char *log);
-
+error_t makeLogFile(const char *log, char *threadName);
 
 #endif

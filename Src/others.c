@@ -11,11 +11,11 @@ error_t getRawData(queue_t *data)
 
     inputFile = fopen(FILE_NAME, "r");
 
-    if (inputFile != NULL)
+    if (inputFile == NULL)
     {
         perror("Openning error");
         strcat(errors.reader,"Opening error, ");
-        // return ERROR;
+        return ERROR;
     }
     int i = 0;
     while (i<data->coresNumber)
@@ -52,9 +52,8 @@ error_t processData(queue_t *data)
             strcat(errors.analyzer,"Calculating error");
             return ERROR;
         }
-
-        return OK;
     }
+    return OK;
 }
 
 error_t printData(queue_t *data)
@@ -118,22 +117,22 @@ error_t checkLogs(void)
 {   
     if (errors.reader[0] != '\0')
     {
-        makeLogFile(errors.reader);
+        makeLogFile(errors.reader, "Reader: ");
     } 
 
     if (errors.analyzer[0] != '\0')
     {
-        makeLogFile(errors.reader);
+        makeLogFile(errors.analyzer, "Analyzer: ");
     } 
 
     if (errors.printner[0] != '\0')
     {
-        makeLogFile(errors.reader);
+        makeLogFile(errors.printner, "Printer: ");
     } 
 }
 
 
-error_t makeLogFile(const char *log)
+error_t makeLogFile(const char *log, char *threadName)
 {
     FILE *outputFile;
 
@@ -144,10 +143,11 @@ error_t makeLogFile(const char *log)
         perror("Creating file error");
         return ERROR;
     }
+    fputs(threadName, outputFile);
 
     fputs(log, outputFile);
     
-    fprintf(outputFile, "\n");
+    fputs("\n",outputFile);
 
     if (fclose(outputFile) != 0)
     {

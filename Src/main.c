@@ -4,10 +4,15 @@
 
 int main()
 {
+
+    printf("Getting data...\n");
+    
+
     pthread_t Reader, Analyzer, Printer, Watchdog, Logger;
 
     queue_t cpuData = {} ;
-     
+
+    
     queueInit(&cpuData, getCoresNumber());
     
     int status;
