@@ -1,4 +1,4 @@
-#include "../Inc/threads.h"
+#include "mythreads.h"
 
 
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
@@ -61,9 +61,9 @@ void* readerThread(void *CpuDataPassed)
 }
 
 
-
 void* analyzerThread(void *CpuDataPassed)
 {
+
     queue_t *data = (queue_t *)CpuDataPassed;
     while(programStatus)
     {
@@ -91,7 +91,7 @@ void* printnerThread(void *CpuDataPassed)
             pthread_cond_wait(&printCondition, &lock);
         }
         
-        if (data->dataSize>= SIZE)
+        if (data->dataSize>= data->coresNumber*2)
         {
             printData(data);
         }
@@ -106,7 +106,7 @@ void* printnerThread(void *CpuDataPassed)
 
 void* watchdogThread(void)
 {
-    alarm(5);
+    alarm(3);
     signal(SIGALRM, sigHandler);
     while (programStatus)
     {
@@ -115,7 +115,7 @@ void* watchdogThread(void)
         {
             pthread_cond_wait(&watchdogCondition, &lock);
         }
-        alarm(2);
+        alarm(3);
         isDataPrinted = false;
         
         pthread_mutex_unlock(&lock);

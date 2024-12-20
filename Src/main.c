@@ -1,6 +1,4 @@
-#include "../Inc/main.h"
-
-
+#include "main.h"
 
 int main()
 {
@@ -10,10 +8,13 @@ int main()
 
     pthread_t Reader, Analyzer, Printer, Watchdog, Logger;
 
-    queue_t cpuData = {} ;
+    int cores = getCoresNumber();
+
+
+    queue_t cpuData = {};
 
     
-    queueInit(&cpuData, getCoresNumber());
+    queueInit(&cpuData, cores);
     
     int status;
     status= pthread_create(&Reader, NULL,(void*)readerThread, (void *)cpuData.p_data);

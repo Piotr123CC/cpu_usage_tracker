@@ -1,6 +1,10 @@
-#include "../Inc/others.h"
+#include "others.h"
 #define FILE_NAME   "/proc/stat"
 
+#include "stdlib.h"
+#include "stdio.h"
+
+#include <math.h>
 extern logData_t errors;
 
 error_t getRawData(queue_t *data)
@@ -45,7 +49,7 @@ error_t getRawData(queue_t *data)
 error_t processData(queue_t *data)
 {
     memset(errors.analyzer,0,50);
-    if (data->dataSize>=SIZE)
+    if (data->dataSize>=data->coresNumber*2)
     {
         if (calculateCpuPercentage(data) != OK)
         {
@@ -68,7 +72,31 @@ error_t printData(queue_t *data)
     }
     for (int i =0;i<data->coresNumber;i++)
     {
-        status = printf("%s %.2f \n ",data->data[i].core, data->coresPercentageTable[i]);
+        char used = '#';
+        char notUsed = '-';
+        if (i == 0)
+        {
+            status = printf("%s%9.2f %%    ",data->data[i].core, data->coresPercentageTable[i]);    
+        }
+        else
+        {
+            status = printf("%s%8.2f %%    ",data->data[i].core, data->coresPercentageTable[i]);
+        }
+        
+        printf("[");
+        int actualUsed = (int)(data->coresPercentageTable[i]);
+        int actualNotUsed = 100 - actualUsed;
+        for (int i = 0; i < actualUsed ; i++)
+        {
+            printf("%c",used);
+        }
+        for (int i = 0; i < actualNotUsed ; i++)
+        {
+            printf("%c",notUsed);
+        }
+        printf("]");
+        printf("\n");
+
         if (status < 1)
         {
             strcat(errors.printner,"Printing error, ");

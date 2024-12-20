@@ -1,4 +1,4 @@
-#include "../Inc/main.h"
+#include "main.h"
 
 void queueInit(queue_t *buffer, const int coresNumber)
 {

@@ -1,7 +1,8 @@
-#ifndef _QUEUE_H_
-#define _QUEUE_H_
+#pragma once
 
-#define SIZE 10
+#include "main.h"
+
+#define SIZE 18
 
 typedef struct cpuData_t{
  	unsigned long   user; 	    //Time spent with normal processing in user mode.
@@ -28,12 +29,9 @@ typedef struct{
 }queue_t;
 
 
-#include "main.h"
-
 void queueInit(queue_t *buffer, const int coresNumber);
 
 error_t putIntoQueue(queue_t *buffer, FILE *inputFile);
 
 void queueDeInit(queue_t *buffer);
 
-#endif

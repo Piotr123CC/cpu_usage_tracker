@@ -1,11 +1,11 @@
-#include "../Inc/algorithm.h"
+#include "algorithm.h"
 
 
 
 error_t calculateCpuPercentage(queue_t *data)
 {
-    float percentage = 0;
-    int current, previous ;
+    double percentage = 0;
+    int current = 0, previous = 0 ;
  
     for (int i=0;i< SIZE/2;i++)
     {
@@ -35,9 +35,7 @@ error_t calculateCpuPercentage(queue_t *data)
         unsigned long long totald = Total - prevTotal;
 
         unsigned long long idled = Idle - prevIdle;
-
-
-        percentage = 100.0 - (idled*100.00/(float)totald);
+        percentage = 100.0 - ((double)idled*100.00/(double)totald);
         if (percentage < 0.00 || percentage > 100.0)
         {
             return ERROR;

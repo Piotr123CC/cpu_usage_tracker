@@ -1,6 +1,5 @@
-#ifndef _MAIN_H_
-#define _MAIN_H_
-
+#pragma once
+#define _ISOC99_SOURCE
 
 typedef enum 
 {
@@ -17,14 +16,5 @@ typedef enum
 #include "queue.h"
 #include "others.h"
 #include "algorithm.h"
-#include "threads.h"
-
-
-
-
-
-
-
-
-
-#endif
+#include "mythreads.h"
+#include <math.h>

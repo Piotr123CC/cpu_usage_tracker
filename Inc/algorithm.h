@@ -1,9 +1,6 @@
-#ifndef _ALGORITHM_H_
-#define _ALGORITHM_H_
-
+#pragma once
 #include "main.h"
 
 error_t calculateCpuPercentage(queue_t *data);
 
 
-#endif 
