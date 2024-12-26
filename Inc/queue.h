@@ -2,8 +2,6 @@
 
 #include "main.h"
 
-#define SIZE 18
-
 typedef struct cpuData_t{
  	unsigned long   user; 	    //Time spent with normal processing in user mode.
  	unsigned long   nice; 	    //Time spent with niced processes in user mode.
@@ -21,11 +19,13 @@ typedef struct cpuData_t{
 
 
 typedef struct{
-    cpuData_t  data[SIZE];
-	cpuData_t *p_data;
-    int head, dataSize;
+	
+    int head;
+	int actualDataSize;
+	int bufferSize;
 	int coresNumber;
 	float *coresPercentageTable;
+	cpuData_t *p_data;
 }queue_t;
 
 

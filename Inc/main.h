@@ -13,8 +13,10 @@ typedef enum
 #include "unistd.h"
 #include "string.h"
 #include "stdbool.h"
+#include "stdlib.h"
+#include <signal.h>
+
 #include "queue.h"
 #include "others.h"
 #include "algorithm.h"
 #include "mythreads.h"
-#include <math.h>

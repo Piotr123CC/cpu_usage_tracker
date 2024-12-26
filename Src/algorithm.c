@@ -7,24 +7,24 @@ error_t calculateCpuPercentage(queue_t *data)
     double percentage = 0;
     int current = 0, previous = 0 ;
  
-    for (int i=0;i< SIZE/2;i++)
+    for (int i=0;i< data->coresNumber;i++)
     {
-        current =  (data->head + i + SIZE/2) % SIZE;
-        previous = (data->head + i) % SIZE;
+        current =  (data->head + i + data->coresNumber) % data->bufferSize;
+        previous = (data->head + i) % data->bufferSize;
 
 
-        unsigned long long prevIdle = data->data[previous].idle + data->data[previous].iowait;
+        unsigned long long prevIdle = data->p_data[previous].idle + data->p_data[previous].iowait;
 
-        unsigned long long Idle = data->data[current].idle + data->data[current].iowait;
+        unsigned long long Idle = data->p_data[current].idle + data->p_data[current].iowait;
 
 
-        unsigned long long prevNonIdle = data->data[previous].user + data->data[previous].nice
-                                            + data->data[previous].system + data->data[previous].irq
-                                            + data->data[previous].softirq + data->data[previous].steal;
+        unsigned long long prevNonIdle = data->p_data[previous].user + data->p_data[previous].nice
+                                            + data->p_data[previous].system + data->p_data[previous].irq
+                                            + data->p_data[previous].softirq + data->p_data[previous].steal;
                                     
-        unsigned long long NonIdle = data->data[current].user + data->data[current].nice
-                                        + data->data[current].system + data->data[current].irq
-                                        + data->data[current].softirq + data->data[current].steal;
+        unsigned long long NonIdle = data->p_data[current].user + data->p_data[current].nice
+                                        + data->p_data[current].system + data->p_data[current].irq
+                                        + data->p_data[current].softirq + data->p_data[current].steal;
 
 
         unsigned long long prevTotal = prevIdle + prevNonIdle;
@@ -40,9 +40,7 @@ error_t calculateCpuPercentage(queue_t *data)
         {
             return ERROR;
         }
-        data->coresPercentageTable[i] = percentage;
-        float cpu = data->coresPercentageTable[i];
-        
+        data->coresPercentageTable[i] = percentage;        
     }
     return OK;
 }

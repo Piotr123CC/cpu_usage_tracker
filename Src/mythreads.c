@@ -91,7 +91,7 @@ void* printnerThread(void *CpuDataPassed)
             pthread_cond_wait(&printCondition, &lock);
         }
         
-        if (data->dataSize>= data->coresNumber*2)
+        if (data->actualDataSize>= data->bufferSize)
         {
             printData(data);
         }

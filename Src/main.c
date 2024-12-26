@@ -13,29 +13,30 @@ int main()
 
     queue_t cpuData = {};
 
+    queue_t *p_cpuData = &cpuData;
     
     queueInit(&cpuData, cores);
     
     int status;
-    status= pthread_create(&Reader, NULL,(void*)readerThread, (void *)cpuData.p_data);
+    status= pthread_create(&Reader, NULL,(void*)readerThread, (void *)p_cpuData);
     if ( status != 0)
     {
         perror("Thread creating error");
     }
 
-    status=pthread_create(&Analyzer, NULL,(void*)analyzerThread, (void *)cpuData.p_data);
+    status=pthread_create(&Analyzer, NULL,(void*)analyzerThread, (void *)p_cpuData);
     if ( status != 0)
     {
         perror("Thread creating error");
     }
 
-    status=pthread_create(&Printer, NULL,(void*)printnerThread, (void *)cpuData.p_data);
+    status=pthread_create(&Printer, NULL,(void*)printnerThread, (void *)p_cpuData);
     if ( status != 0)
     {
         perror("Thread creating error");
     }
 
-    status=pthread_create(&Logger, NULL,(void*)loggerThread, (void *)cpuData.p_data);
+    status=pthread_create(&Logger, NULL,(void*)loggerThread, (void *)p_cpuData);
     if ( status != 0)
     {
         perror("Thread creating error");

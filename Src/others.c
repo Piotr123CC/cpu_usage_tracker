@@ -7,7 +7,7 @@
 #include <math.h>
 extern logData_t errors;
 
-error_t getRawData(queue_t *data)
+void getRawData(queue_t *data)
 {
     
     memset(errors.reader,0,50);
@@ -19,7 +19,6 @@ error_t getRawData(queue_t *data)
     {
         perror("Openning error");
         strcat(errors.reader,"Opening error, ");
-        return ERROR;
     }
     int i = 0;
     while (i<data->coresNumber)
@@ -27,7 +26,6 @@ error_t getRawData(queue_t *data)
         if (putIntoQueue(data, inputFile) != OK)
         {
             strcat(errors.reader,"Queue error, ");
-            return ERROR;
         }
         i++;
         int c;
@@ -38,29 +36,25 @@ error_t getRawData(queue_t *data)
     {
         perror("Closeing error");
         strcat(errors.reader,"Closeing error");
-        return ERROR;
     }
     inputFile = NULL;
 
-    return OK;
 }
 
 
-error_t processData(queue_t *data)
+void processData(queue_t *data)
 {
     memset(errors.analyzer,0,50);
-    if (data->dataSize>=data->coresNumber*2)
+    if (data->actualDataSize>=data->bufferSize)
     {
         if (calculateCpuPercentage(data) != OK)
         {
             strcat(errors.analyzer,"Calculating error");
-            return ERROR;
         }
     }
-    return OK;
 }
 
-error_t printData(queue_t *data)
+void printData(queue_t *data)
 {
     memset(errors.printner,0,50);
     int status;
@@ -68,7 +62,6 @@ error_t printData(queue_t *data)
     if (status != 0)
     {
         strcat(errors.printner,"Clearing console error, ");
-        return ERROR;
     }
     for (int i =0;i<data->coresNumber;i++)
     {
@@ -76,13 +69,16 @@ error_t printData(queue_t *data)
         char notUsed = '-';
         if (i == 0)
         {
-            status = printf("%s%9.2f %%    ",data->data[i].core, data->coresPercentageTable[i]);    
+            status = printf("%s%9.2f %%    ",data->p_data[i].core, data->coresPercentageTable[i]);    
         }
-        else
+        else if (i >0 && i < 11)
         {
-            status = printf("%s%8.2f %%    ",data->data[i].core, data->coresPercentageTable[i]);
+            status = printf("%s%8.2f %%    ",data->p_data[i].core, data->coresPercentageTable[i]);
         }
-        
+        else if (i >= 11)
+        {
+            status = printf("%s%7.2f %%    ",data->p_data[i].core, data->coresPercentageTable[i]);
+        }
         printf("[");
         int actualUsed = (int)(data->coresPercentageTable[i]);
         int actualNotUsed = 100 - actualUsed;
@@ -94,13 +90,11 @@ error_t printData(queue_t *data)
         {
             printf("%c",notUsed);
         }
-        printf("]");
-        printf("\n");
+        printf("]\n");
 
         if (status < 1)
         {
             strcat(errors.printner,"Printing error, ");
-            return ERROR;
         }
     }
 }
@@ -109,7 +103,7 @@ error_t printData(queue_t *data)
 
 int getCoresNumber(void)
 {
-    int i = 0, cores = 0;
+    int cores = 0;
 
     FILE *inputFile = NULL;
 
@@ -141,7 +135,7 @@ int getCoresNumber(void)
 
 
 
-error_t checkLogs(void)
+void checkLogs(void)
 {   
     if (errors.reader[0] != '\0')
     {
@@ -160,7 +154,7 @@ error_t checkLogs(void)
 }
 
 
-error_t makeLogFile(const char *log, char *threadName)
+void makeLogFile(const char *log, char *threadName)
 {
     FILE *outputFile;
 
@@ -169,7 +163,6 @@ error_t makeLogFile(const char *log, char *threadName)
     if (outputFile == NULL)
     {
         perror("Creating file error");
-        return ERROR;
     }
     fputs(threadName, outputFile);
 
@@ -180,11 +173,9 @@ error_t makeLogFile(const char *log, char *threadName)
     if (fclose(outputFile) != 0)
     {
         perror("Closeing file error");
-        return ERROR;
     }
 
     outputFile = NULL;
-    return OK;
 }
 
 
